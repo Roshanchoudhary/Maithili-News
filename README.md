@@ -1,31 +1,55 @@
-# मैथिली समाचार — Clean Cloudflare Pages + D1
+# मैथिली समाचार — Complete Cloudflare Pages + D1 Portal
+
+यह project Cloudflare Pages + Pages Functions + D1 के लिये बनाया गया है। कोई Node build step आवश्यक नहीं है।
+
+## Features
+- Reader registration/login/logout/profile
+- Admin / Editor / Author / Reader roles
+- News draft/review/published/archived workflow
+- Category → Sub-category menu
+- Desktop dropdown + mobile accordion menu
+- Comments + replies schema + moderation
+- Likes + bookmarks
+- Subscription plans and pending subscription orders
+- Notifications and audit-log tables
 
 ## 1. D1
-Create a D1 database and run `schema.sql` once:
+Create a new D1 database and bind it to Pages with variable name `DB`.
+Run the included `schema.sql` once:
 
 ```bash
-npx wrangler d1 execute YOUR_DB_NAME --remote --file=./schema.sql
+npx wrangler d1 execute YOUR_DATABASE_NAME --remote --file=./schema.sql
 ```
 
-Then bind it in Cloudflare Pages as `DB`.
+If you already ran an older schema on the new empty database, do not run a second conflicting schema. Use a fresh D1 for this final package.
 
-## 2. Secret
-Add a Pages secret named `SETUP_KEY`.
+## 2. First Admin
+In Cloudflare Pages → Settings → Environment variables/Secrets, add:
 
-## 3. First admin
-After deployment, POST JSON to `/api/setup` with header `X-Setup-Key: YOUR_SETUP_KEY`:
+`SETUP_KEY = a long random secret`
+
+Then, after deployment, send a POST request to `/api/setup` with header `X-Setup-Key` and JSON:
 
 ```json
-{"name":"Admin","email":"admin@example.com","password":"ChangeMe123!"}
+{"name":"Site Admin","email":"admin@example.com","password":"ChangeMe123!"}
 ```
 
-After creating the admin, use `/login.html`.
+Example with curl:
 
-## 4. Roles
-- admin: full access
-- editor: all editorial/news/category/user work except admin-only infrastructure
-- author: create/edit own news; publish becomes `review`
-- reader: website account and subscription
+```bash
+curl -X POST https://YOUR-SITE.pages.dev/api/setup \
+  -H "Content-Type: application/json" \
+  -H "X-Setup-Key: YOUR_SETUP_KEY" \
+  -d '{"name":"Site Admin","email":"admin@example.com","password":"ChangeMe123!"}'
+```
 
-## 5. Subscription
-The included subscription system creates a pending subscription/order. It does not pretend that payment was completed. For real online payment, add a payment provider (e.g. Razorpay/Stripe) and its secrets/webhook before marking subscriptions active.
+Then login at `/login.html`.
+
+## 3. Cloudflare Pages
+- Production branch: `main`
+- Build command: leave empty
+- Functions directory: `/functions` is detected automatically
+- D1 binding: `DB`
+
+## 4. Subscription
+The database/order workflow is real and records pending subscriptions. Actual money collection requires a payment provider and webhook (for example Razorpay). This package does not fake successful payments.

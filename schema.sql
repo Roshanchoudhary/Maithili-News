@@ -1,97 +1,22 @@
 PRAGMA foreign_keys = ON;
-
-CREATE TABLE IF NOT EXISTS users (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL,
-  email TEXT NOT NULL UNIQUE,
-  password_hash TEXT NOT NULL,
-  role TEXT NOT NULL DEFAULT 'reader' CHECK(role IN ('admin','editor','author','reader')),
-  status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','inactive','blocked')),
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS sessions (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  token_hash TEXT NOT NULL UNIQUE,
-  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  expires_at TEXT NOT NULL,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token_hash);
-CREATE INDEX IF NOT EXISTS idx_sessions_expiry ON sessions(expires_at);
-
-CREATE TABLE IF NOT EXISTS categories (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL,
-  slug TEXT NOT NULL UNIQUE,
-  parent_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
-  description TEXT DEFAULT '',
-  menu_visible INTEGER NOT NULL DEFAULT 1,
-  menu_order INTEGER NOT NULL DEFAULT 0,
-  status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','inactive')),
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
+CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,email TEXT NOT NULL UNIQUE,password_hash TEXT NOT NULL,role TEXT NOT NULL DEFAULT 'reader' CHECK(role IN ('admin','editor','author','reader')),status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','inactive','blocked')),created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS sessions (id INTEGER PRIMARY KEY AUTOINCREMENT,token_hash TEXT NOT NULL UNIQUE,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,expires_at TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token_hash); CREATE INDEX IF NOT EXISTS idx_sessions_expiry ON sessions(expires_at);
+CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,slug TEXT NOT NULL UNIQUE,parent_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,description TEXT DEFAULT '',menu_visible INTEGER NOT NULL DEFAULT 1,menu_order INTEGER NOT NULL DEFAULT 0,status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','inactive')),created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE INDEX IF NOT EXISTS idx_categories_parent ON categories(parent_id);
-
-CREATE TABLE IF NOT EXISTS news (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  title TEXT NOT NULL,
-  slug TEXT NOT NULL UNIQUE,
-  summary TEXT DEFAULT '',
-  content TEXT NOT NULL,
-  image_url TEXT DEFAULT '',
-  category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
-  author_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
-  status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','review','published','archived')),
-  featured INTEGER NOT NULL DEFAULT 0,
-  seo_title TEXT DEFAULT '',
-  seo_description TEXT DEFAULT '',
-  views INTEGER NOT NULL DEFAULT 0,
-  published_at TEXT,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-CREATE INDEX IF NOT EXISTS idx_news_status ON news(status);
-CREATE INDEX IF NOT EXISTS idx_news_category ON news(category_id);
-CREATE INDEX IF NOT EXISTS idx_news_author ON news(author_id);
-CREATE INDEX IF NOT EXISTS idx_news_published ON news(published_at);
-
-CREATE TABLE IF NOT EXISTS plans (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL,
-  slug TEXT NOT NULL UNIQUE,
-  description TEXT DEFAULT '',
-  amount_paise INTEGER NOT NULL DEFAULT 0,
-  duration_days INTEGER NOT NULL DEFAULT 30,
-  status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','inactive')),
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS subscriptions (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  plan_id INTEGER NOT NULL REFERENCES plans(id),
-  status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','active','expired','cancelled')),
-  amount_paise INTEGER NOT NULL DEFAULT 0,
-  provider TEXT DEFAULT '',
-  provider_order_id TEXT DEFAULT '',
-  provider_payment_id TEXT DEFAULT '',
-  started_at TEXT,
-  expires_at TEXT,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
+CREATE TABLE IF NOT EXISTS news (id INTEGER PRIMARY KEY AUTOINCREMENT,title TEXT NOT NULL,slug TEXT NOT NULL UNIQUE,summary TEXT DEFAULT '',content TEXT NOT NULL,image_url TEXT DEFAULT '',category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,author_id INTEGER REFERENCES users(id) ON DELETE SET NULL,status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','review','published','archived')),featured INTEGER NOT NULL DEFAULT 0,seo_title TEXT DEFAULT '',seo_description TEXT DEFAULT '',views INTEGER NOT NULL DEFAULT 0,published_at TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE INDEX IF NOT EXISTS idx_news_status ON news(status); CREATE INDEX IF NOT EXISTS idx_news_category ON news(category_id); CREATE INDEX IF NOT EXISTS idx_news_author ON news(author_id); CREATE INDEX IF NOT EXISTS idx_news_published ON news(published_at);
+CREATE TABLE IF NOT EXISTS comments (id INTEGER PRIMARY KEY AUTOINCREMENT,news_id INTEGER NOT NULL REFERENCES news(id) ON DELETE CASCADE,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,parent_id INTEGER REFERENCES comments(id) ON DELETE CASCADE,body TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected')),created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE INDEX IF NOT EXISTS idx_comments_news ON comments(news_id); CREATE INDEX IF NOT EXISTS idx_comments_parent ON comments(parent_id);
+CREATE TABLE IF NOT EXISTS news_likes (id INTEGER PRIMARY KEY AUTOINCREMENT,news_id INTEGER NOT NULL REFERENCES news(id) ON DELETE CASCADE,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,UNIQUE(news_id,user_id));
+CREATE TABLE IF NOT EXISTS bookmarks (id INTEGER PRIMARY KEY AUTOINCREMENT,news_id INTEGER NOT NULL REFERENCES news(id) ON DELETE CASCADE,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,UNIQUE(news_id,user_id));
+CREATE TABLE IF NOT EXISTS notifications (id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,title TEXT NOT NULL,body TEXT DEFAULT '',link TEXT DEFAULT '',is_read INTEGER NOT NULL DEFAULT 0,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id,is_read);
+CREATE TABLE IF NOT EXISTS plans (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,slug TEXT NOT NULL UNIQUE,description TEXT DEFAULT '',amount_paise INTEGER NOT NULL DEFAULT 0,duration_days INTEGER NOT NULL DEFAULT 30,status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','inactive')),created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS subscriptions (id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,plan_id INTEGER NOT NULL REFERENCES plans(id),status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','active','expired','cancelled')),amount_paise INTEGER NOT NULL DEFAULT 0,provider TEXT DEFAULT '',provider_order_id TEXT DEFAULT '',provider_payment_id TEXT DEFAULT '',started_at TEXT,expires_at TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE INDEX IF NOT EXISTS idx_subscriptions_user ON subscriptions(user_id);
-
-INSERT OR IGNORE INTO categories(name,slug,parent_id,description,menu_visible,menu_order,status) VALUES
-('देश','desh',NULL,'राष्ट्रीय समाचार',1,10,'active'),
-('राज्य','rajya',NULL,'राज्यक समाचार',1,20,'active'),
-('मिथिला','mithila',NULL,'मिथिला क्षेत्रक समाचार',1,30,'active'),
-('मनोरंजन','manoranjan',NULL,'मनोरंजन',1,40,'active'),
-('खेल','khel',NULL,'खेल समाचार',1,50,'active');
-
-INSERT OR IGNORE INTO plans(name,slug,description,amount_paise,duration_days,status) VALUES
-('मासिक','monthly','एक मासक सदस्यता',9900,30,'active'),
-('वार्षिक','yearly','एक वर्षक सदस्यता',99900,365,'active');
+CREATE TABLE IF NOT EXISTS audit_logs (id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,action TEXT NOT NULL,entity TEXT DEFAULT '',entity_id INTEGER,details TEXT DEFAULT '',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+INSERT OR IGNORE INTO categories(name,slug,parent_id,description,menu_visible,menu_order,status) VALUES ('देश','desh',NULL,'राष्ट्रीय समाचार',1,10,'active'),('राज्य','rajya',NULL,'राज्यक समाचार',1,20,'active'),('मिथिला','mithila',NULL,'मिथिला क्षेत्रक समाचार',1,30,'active'),('मनोरंजन','manoranjan',NULL,'मनोरंजन',1,40,'active'),('खेल','khel',NULL,'खेल समाचार',1,50,'active');
+INSERT OR IGNORE INTO categories(name,slug,parent_id,description,menu_visible,menu_order,status) SELECT 'बिहार','bihar',id,'बिहारक समाचार',1,1,'active' FROM categories WHERE slug='rajya';
+INSERT OR IGNORE INTO categories(name,slug,parent_id,description,menu_visible,menu_order,status) SELECT 'नेपाल','nepal',id,'नेपालसँ जुड़ल समाचार',1,2,'active' FROM categories WHERE slug='mithila';
+INSERT OR IGNORE INTO plans(name,slug,description,amount_paise,duration_days,status) VALUES ('मासिक','monthly','एक मासक सदस्यता',9900,30,'active'),('वार्षिक','yearly','एक वर्षक सदस्यता',99900,365,'active');
