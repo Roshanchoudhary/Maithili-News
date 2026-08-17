@@ -1,63 +1,26 @@
 <!doctype html>
 <html lang="mai">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>पहिला Admin बनाउ — मैथिली समाचार</title>
-<link rel="stylesheet" href="/style.css">
-<style>
-body{background:#f7f7f7}.setup-page{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}.setup-box{width:min(460px,100%);background:#fff;border-radius:14px;padding:28px;box-shadow:0 10px 35px rgba(0,0,0,.08)}
-.setup-box h1{margin:8px 0 6px}.setup-box p{color:#666;line-height:1.6}.setup-label{display:block;font-weight:700;margin:16px 0 7px}.setup-input{width:100%;box-sizing:border-box;height:44px;border:1px solid #ddd;border-radius:8px;padding:0 12px;font-size:14px}.setup-input:focus{outline:none;border-color:#8b0000}.setup-btn{width:100%;height:46px;border:0;border-radius:8px;background:#8b0000;color:#fff;font-weight:800;font-size:14px;cursor:pointer;margin-top:20px}.setup-btn:disabled{opacity:.65;cursor:wait}.setup-msg{display:none;margin:14px 0;padding:11px;border-radius:8px;font-size:13px}.setup-msg.ok{display:block;background:#e9f7ed;color:#176b2c}.setup-msg.err{display:block;background:#fde7e7;color:#a00000}.setup-note{font-size:12px;color:#888;margin-top:14px}
-</style>
-</head>
-<body>
-<main class="setup-page">
-  <section class="setup-box">
-    <a class="logo" href="/">मैथिली समाचार</a>
-    <h1>पहिला Admin बनाउ</h1>
-    <p id="intro">नव D1 database लेल पहिला Admin account बनाउ। ई setup केवल तखन उपलब्ध अछि जखन database में Admin नहि अछि।</p>
-    <div id="msg" class="setup-msg"></div>
-    <form id="form">
-      <label class="setup-label" for="name">नाम</label>
-      <input id="name" class="setup-input" required autocomplete="name" placeholder="Admin नाम">
-      <label class="setup-label" for="email">Email</label>
-      <input id="email" class="setup-input" type="email" required autocomplete="email" placeholder="admin@example.com">
-      <label class="setup-label" for="password">Password</label>
-      <input id="password" class="setup-input" type="password" required minlength="8" autocomplete="new-password" placeholder="कम-से-कम 8 characters">
-      <button id="submit" class="setup-btn" type="submit">Admin बनाउ</button>
-    </form>
-    <div class="setup-note">Admin बनलाक बाद एहि page सँ दोसर Admin नहि बनत। Login page सँ login करू।</div>
-  </section>
-</main>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>पहिला Admin — मैथिली समाचार</title><link rel="stylesheet" href="/style.css"></head>
+<body><main class="auth-page"><div class="auth-box">
+<a class="logo" href="/">मैथिली समाचार</a>
+<h1>पहिला Admin बनाउ</h1>
+<div id="msg" class="msg"></div>
+<form id="form">
+<label>नाम</label><input id="name" class="input" required autocomplete="name">
+<label>Email</label><input id="email" class="input" type="email" required autocomplete="email">
+<label>Password</label><input id="password" class="input" type="password" minlength="8" required autocomplete="new-password">
+<button id="go" class="btn btn-primary wide" type="submit">Admin बनाउ</button>
+</form>
+<p><a href="/login.html">Login page पर जाउ</a></p>
+<p><a href="/">← वेबसाइट</a></p>
+</div></main>
 <script>
-const $=id=>document.getElementById(id);
-function message(text,ok=false){const m=$('msg');m.textContent=text;m.className='setup-msg '+(ok?'ok':'err');}
+const $=s=>document.querySelector(s);
 async function check(){
-  try{
-    const r=await fetch('/api/setup',{headers:{Accept:'application/json'},cache:'no-store'});
-    const d=await r.json();
-    if(!r.ok||!d.success) throw new Error(d.error||'Setup status load नहि भेल।');
-    if(!d.available){
-      $('form').style.display='none';
-      $('intro').textContent='Admin account पहिले सँ बनल अछि। आब Login करू।';
-      message('Admin setup बंद अछि। Login page पर जाउ।',true);
-      const a=document.createElement('a');a.href='/login.html';a.textContent='Login करू';a.style.display='inline-block';a.style.marginTop='10px';$('msg').appendChild(document.createElement('br'));$('msg').appendChild(a);
-    }
-  }catch(e){message(e.message);}
+ try{const r=await fetch('/api/setup',{headers:{Accept:'application/json'},cache:'no-store'});const d=await r.json();
+ if(d.success&&!d.setupAvailable){$('#form').innerHTML='<p>Admin account पहिले सँ बनल अछि। आब Login करू।</p><a class="btn btn-primary wide" href="/login.html">Login करू</a>';}
+ }catch(e){$('#msg').textContent='Setup check नहि भ\' सकल।';}
 }
-$('form').addEventListener('submit',async e=>{
-  e.preventDefault();
-  const btn=$('submit');btn.disabled=true;btn.textContent='Admin बनि रहल अछि...';
-  try{
-    const r=await fetch('/api/setup',{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify({name:$('name').value.trim(),email:$('email').value.trim(),password:$('password').value})});
-    const d=await r.json();
-    if(!r.ok||!d.success) throw new Error(d.error||'Admin बनि नहि सकल।');
-    message('Admin सफलतापूर्वक बनि गेल। Login page पर redirect भ रहल अछि...',true);
-    $('form').style.display='none';
-    setTimeout(()=>location.href='/login.html',1200);
-  }catch(e){message(e.message);btn.disabled=false;btn.textContent='Admin बनाउ';}
-});
+$('#form').onsubmit=async e=>{e.preventDefault();const b={name:$('#name').value.trim(),email:$('#email').value.trim(),password:$('#password').value};$('#go').disabled=true;$('#msg').textContent='Admin बनि रहल अछि...';try{const r=await fetch('/api/setup',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(b)});const d=await r.json();if(!r.ok||!d.success)throw Error(d.error||'Admin setup failed');$('#msg').textContent='Admin सफलतापूर्वक बनि गेल।';setTimeout(()=>location.href='/login.html',500);}catch(err){$('#msg').textContent=err.message;$('#go').disabled=false;}};
 check();
-</script>
-</body>
-</html>
+</script></body></html>

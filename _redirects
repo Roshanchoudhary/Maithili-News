@@ -1,2 +1,5 @@
-/news/* /news.html 200
-/category/* /category.html 200
+/login /login.html 200
+/register /register.html 200
+/setup /setup.html 200
+/account /account.html 200
+/admin /admin.html 200
