@@ -53,3 +53,13 @@ Then login at `/login.html`.
 
 ## 4. Subscription
 The database/order workflow is real and records pending subscriptions. Actual money collection requires a payment provider and webhook (for example Razorpay). This package does not fake successful payments.
+
+## First Admin setup
+
+After deploying and binding D1 as `DB`, open:
+
+`/setup.html`
+
+Enter the first Admin name, email and password. The endpoint is available only while the `users` table is empty. After the first Admin is created, setup is automatically closed. If `SETUP_KEY` is configured in Cloudflare, it is still required as an additional safeguard.
+
+Then log in at `/login.html`.
