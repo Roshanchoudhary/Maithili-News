@@ -1,15 +1,142 @@
-<!doctype html><html lang="mai"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Dashboard — मैथिली समाचार</title><link rel="stylesheet" href="/style.css"></head><body><header class="header"><div class="container head"><a class="logo" href="/">मैथिली समाचार</a><nav class="dashnav"><button data-tab="news">समाचार</button><button data-tab="categories">श्रेणी</button><button data-tab="comments">टिप्पणी</button><button data-tab="users" id="usersTab">Users</button><button data-tab="plans" id="plansTab">Subscription</button></nav><button id="logout" class="btn btn-danger">Logout</button></div></header><main class="container"><div id="who" class="panel"></div><div id="screen"></div></main><div id="modal" class="modal"><div class="modal-box"><div class="actions between"><h2 id="modalTitle">समाचार</h2><button class="btn btn-light" onclick="closeModal()">✕</button></div><input type="hidden" id="nid"><div class="form-grid"><div class="full"><label>शीर्षक</label><input id="title" class="input"></div><div><label>English Slug</label><input id="slug" class="input"></div><div><label>Category</label><select id="cat" class="input"></select></div><div class="full"><label>Summary</label><textarea id="summary" class="input" rows="3"></textarea></div><div class="full"><label>Content</label><textarea id="content" class="input" rows="12"></textarea></div><div><label>Image URL</label><input id="image" class="input"></div><div><label>Status</label><select id="status" class="input"><option value="draft">Draft</option><option value="review">Review</option><option value="published">Published</option><option value="archived">Archived</option></select></div><div><label>SEO title</label><input id="seoTitle" class="input"></div><div><label>SEO description</label><input id="seoDesc" class="input"></div><div><label><input type="checkbox" id="featured"> Featured</label></div></div><div class="actions"><button id="saveNews" class="btn btn-primary">Save</button></div></div></div><script>
+<!doctype html><html lang="mai"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Dashboard — मैथिली समाचार</title><link rel="stylesheet" href="/style.css"></head><body><header class="header"><div class="container head"><a class="logo" href="/">मैथिली समाचार</a><nav class="dashnav"><button data-tab="news">समाचार</button><button data-tab="categories">श्रेणी</button><button data-tab="comments">टिप्पणी</button><button data-tab="users" id="usersTab">Users</button><button data-tab="plans" id="plansTab">Subscription</button></nav><button id="logout" class="btn btn-danger">Logout</button></div></header><main class="container"><div id="who" class="panel"></div><div id="screen"></div></main>
+<div id="bulkModal" class="modal">
+  <div class="modal-box">
+    <div class="actions between">
+      <h2>एक साथ समाचार Upload</h2>
+      <button class="btn btn-light" onclick="closeBulkUpload()">✕</button>
+    </div>
+
+    <p class="muted">
+      CSV अथवा Notepad (.txt) file upload करू। प्रत्येक row एक अलग समाचार होय।
+      Status column में <b>published</b>, <b>draft</b>, <b>review</b> अथवा <b>archived</b> लिखि सकैत छी।
+    </p>
+
+    <div class="panel" style="margin:12px 0">
+      <b>CSV Header:</b><br>
+      <code>title,slug,summary,content,category,status,image_url,featured,seo_title,seo_description</code>
+      <p class="muted" style="margin-bottom:0">
+        <b>जरूरी:</b> title और content। slug खाली छोड़लासँ system अपने slug बना देत।
+        category में category नाम अथवा slug दे सकैत छी।
+      </p>
+    </div>
+
+    <input id="bulkFile" class="input" type="file" accept=".csv,.txt,text/csv,text/plain">
+    <div id="bulkInfo" class="muted" style="margin-top:10px"></div>
+
+    <div class="actions" style="margin-top:14px">
+      <button class="btn btn-light" onclick="downloadBulkTemplate()">Template Download</button>
+      <button id="bulkUploadBtn" class="btn btn-primary" onclick="uploadBulkNews()">Upload All News</button>
+    </div>
+
+    <div id="bulkResult" style="margin-top:14px"></div>
+  </div>
+</div>
+<div id="modal" class="modal"><div class="modal-box"><div class="actions between"><h2 id="modalTitle">समाचार</h2><button class="btn btn-light" onclick="closeModal()">✕</button></div><input type="hidden" id="nid"><div class="form-grid"><div class="full"><label>शीर्षक</label><input id="title" class="input"></div><div><label>English Slug</label><input id="slug" class="input"></div><div><label>Category</label><select id="cat" class="input"></select></div><div class="full"><label>Summary</label><textarea id="summary" class="input" rows="3"></textarea></div><div class="full"><label>Content</label><textarea id="content" class="input" rows="12"></textarea></div><div><label>Image URL</label><input id="image" class="input"></div><div><label>Status</label><select id="status" class="input"><option value="draft">Draft</option><option value="review">Review</option><option value="published">Published</option><option value="archived">Archived</option></select></div><div><label>SEO title</label><input id="seoTitle" class="input"></div><div><label>SEO description</label><input id="seoDesc" class="input"></div><div><label><input type="checkbox" id="featured"> Featured</label></div></div><div class="actions"><button id="saveNews" class="btn btn-primary">Save</button></div></div></div><script>
 const $=s=>document.querySelector(s);const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));let user,cats=[];
 async function api(p,o={}){const r=await fetch('/api'+p,{credentials:'include',cache:'no-store',...o,headers:{'Content-Type':'application/json',...(o.headers||{})}}),d=await r.json().catch(()=>({success:false,error:'Invalid server response'}));if(!r.ok||d.success===false)throw Error(d.error||'Request failed');return d}
 async function init(){user=(await api('/auth')).user;if(!user||user.role==='reader'){location.href='/login.html';return}$('#who').innerHTML=`<b>${esc(user.name)}</b> · ${esc(user.role)} <span class="muted">${esc(user.email)}</span>`;if(user.role==='author'){$('#usersTab').style.display='none';$('#plansTab').style.display='none'}if(user.role==='editor'){$('#usersTab').style.display='none'}cats=(await api('/categories')).categories;bind();loadNews()}
 function bind(){document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>show(b.dataset.tab));$('#logout').onclick=async()=>{await api('/auth',{method:'POST',body:JSON.stringify({action:'logout'})});location.href='/'};$('#saveNews').onclick=saveNews}
 function show(t){if(t==='news')loadNews();if(t==='categories')loadCats();if(t==='comments')loadComments();if(t==='users')loadUsers();if(t==='plans')loadPlans()}
-async function loadNews(){const q=user.role==='author'?'&mine=1':'';const d=await api('/news?status=all&limit=100'+q);const rows=d.news||[];$('#screen').innerHTML=`<div class="panel"><div class="actions between"><h2>समाचार प्रबंधन</h2><button class="btn btn-primary" onclick="addNews()">+ नया समाचार</button></div><div class="table-wrap"><table class="table"><thead><tr><th>शीर्षक</th><th>लेखक</th><th>श्रेणी</th><th>Status</th><th>Action</th></tr></thead><tbody>${rows.map(n=>`<tr><td>${esc(n.title)}</td><td>${esc(n.author_name||'')}</td><td>${esc(n.category_name||'')}</td><td><span class="badge">${esc(n.status)}</span></td><td><button class="btn btn-light" onclick="editNews(${n.id})">Edit</button>${user.role!=='author'?` <button class="btn btn-danger" onclick="delNews(${n.id})">Delete</button>`:''}</td></tr>`).join('')}</tbody></table></div></div>`}
+async function loadNews(){const q=user.role==='author'?'&mine=1':'';const d=await api('/news?status=all&limit=100'+q);const rows=d.news||[];$('#screen').innerHTML=`<div class="panel"><div class="actions between"><h2>समाचार प्रबंधन</h2><div class="actions"><button class="btn btn-primary" onclick="addNews()">+ नया समाचार</button> <button class="btn btn-light" onclick="openBulkUpload()">⬆ Bulk Upload</button></div></div><div class="table-wrap"><table class="table"><thead><tr><th>शीर्षक</th><th>लेखक</th><th>श्रेणी</th><th>Status</th><th>Action</th></tr></thead><tbody>${rows.map(n=>`<tr><td>${esc(n.title)}</td><td>${esc(n.author_name||'')}</td><td>${esc(n.category_name||'')}</td><td><span class="badge">${esc(n.status)}</span></td><td><button class="btn btn-light" onclick="editNews(${n.id})">Edit</button>${user.role!=='author'?` <button class="btn btn-danger" onclick="delNews(${n.id})">Delete</button>`:''}</td></tr>`).join('')}</tbody></table></div></div>`}
 function fillCats(){cats=(cats||[]);$('#cat').innerHTML='<option value="">मुख्य</option>'+cats.map(c=>`<option value="${c.id}">${c.parent_id?'↳ ':''}${esc(c.name)}</option>`).join('')}
 function addNews(){fillCats();['nid','title','slug','summary','content','image','seoTitle','seoDesc'].forEach(x=>$('#'+x).value='');$('#cat').value='';$('#featured').checked=false;$('#status').value=user.role==='author'?'draft':'published';$('#modalTitle').textContent='नया समाचार';$('#modal').classList.add('show')}
 async function editNews(id){const n=(await api('/news?id='+id)).news;fillCats();$('#nid').value=n.id;$('#title').value=n.title;$('#slug').value=n.slug;$('#summary').value=n.summary||'';$('#content').value=n.content;$('#image').value=n.image_url||'';$('#cat').value=n.category_id||'';$('#status').value=n.status;$('#seoTitle').value=n.seo_title||'';$('#seoDesc').value=n.seo_description||'';$('#featured').checked=!!n.featured;$('#modalTitle').textContent='समाचार Edit';$('#modal').classList.add('show')}
 async function saveNews(){const id=$('#nid').value,b={title:$('#title').value.trim(),slug:$('#slug').value.trim(),summary:$('#summary').value,content:$('#content').value,image_url:$('#image').value,category_id:$('#cat').value?Number($('#cat').value):null,status:$('#status').value,seo_title:$('#seoTitle').value,seo_description:$('#seoDesc').value,featured:$('#featured').checked};try{await api('/news'+(id?'?id='+id:''),{method:id?'PUT':'POST',body:JSON.stringify(b)});closeModal();loadNews()}catch(e){alert(e.message)}}
 async function delNews(id){if(!confirm('समाचार delete करब?'))return;try{await api('/news?id='+id,{method:'DELETE'});loadNews()}catch(e){alert(e.message)}}function closeModal(){$('#modal').classList.remove('show')}
+
+function openBulkUpload(){
+  $('#bulkFile').value='';
+  $('#bulkInfo').textContent='';
+  $('#bulkResult').innerHTML='';
+  $('#bulkModal').classList.add('show');
+}
+function closeBulkUpload(){ $('#bulkModal').classList.remove('show'); }
+
+function parseCSV(text){
+  text=String(text||'').replace(/^\uFEFF/,'');
+  const rows=[]; let row=[], cell='', quoted=false;
+  for(let i=0;i<text.length;i++){
+    const ch=text[i], next=text[i+1];
+    if(quoted){
+      if(ch==='"' && next==='"'){ cell+='"'; i++; }
+      else if(ch==='"'){ quoted=false; }
+      else cell+=ch;
+    }else{
+      if(ch==='"' && cell===''){ quoted=true; }
+      else if(ch===','){ row.push(cell); cell=''; }
+      else if(ch==='\r'){ if(next==='\n')i++; row.push(cell); cell=''; if(row.some(v=>v.trim()!==''))rows.push(row); row=[]; }
+      else if(ch==='\n'){ row.push(cell); cell=''; if(row.some(v=>v.trim()!==''))rows.push(row); row=[]; }
+      else if(ch==='\t'){ row.push(cell); cell=''; }
+      else cell+=ch;
+    }
+  }
+  if(quoted) throw Error('CSV में quote बंद नहि अछि।');
+  row.push(cell);
+  if(row.some(v=>v.trim()!==''))rows.push(row);
+  if(!rows.length) return [];
+  const headers=rows[0].map(x=>x.trim().toLowerCase());
+  return rows.slice(1).map((r,idx)=>{
+    const o={};
+    headers.forEach((h,i)=>o[h]=(r[i]??'').trim());
+    o._row=idx+2;
+    return o;
+  });
+}
+
+function csvCell(v){
+  v=String(v??'');
+  return /[",\r\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v;
+}
+function downloadBulkTemplate(){
+  const h='title,slug,summary,content,category,status,image_url,featured,seo_title,seo_description';
+  const sample=[
+    'पहिल समाचार','first-news','छोट summary','पूरा समाचार content','देश','published','','0','','',
+    'दोसर समाचार','second-news','Draft summary','दोसर समाचारक पूरा content','मिथिला','draft','','0','',''
+  ];
+  const csv=h+'\r\n'+csvCell(sample[0])+','+sample.slice(1,10).map(csvCell).join(',')+'\r\n'
+             +csvCell(sample[10])+','+sample.slice(11,20).map(csvCell).join(',');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download='news-upload-template.csv'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+
+async function uploadBulkNews(){
+  const file=$('#bulkFile').files[0];
+  if(!file){ alert('पहिने CSV अथवा TXT file चुनू।'); return; }
+  const btn=$('#bulkUploadBtn');
+  btn.disabled=true; btn.textContent='Upload भ\' रहल अछि...';
+  $('#bulkResult').innerHTML='';
+
+  try{
+    const text=await file.text();
+    const rows=parseCSV(text);
+    if(!rows.length) throw Error('File में कोनो news row नहि भेटल।');
+
+    const valid=rows.filter(r=>Object.values(r).some(v=>String(v||'').trim() && v!==r._row));
+    $('#bulkInfo').textContent=`${valid.length} news upload लेल तैयार अछि।`;
+
+    const d=await api('/news?bulk=1',{
+      method:'POST',
+      body:JSON.stringify({rows:valid})
+    });
+
+    const ok=d.imported||0, failed=d.failed||0;
+    let html=`<div class="panel"><b>Upload पूरा।</b><br>कुल: ${valid.length} · सफल: ${ok} · असफल: ${failed}</div>`;
+    if(d.errors?.length){
+      html+=`<div class="panel"><b>जकरा में समस्या अछि:</b><ul>${
+        d.errors.map(e=>`<li>Row ${esc(e.row)}: ${esc(e.error)}</li>`).join('')
+      }</ul></div>`;
+    }
+    $('#bulkResult').innerHTML=html;
+    loadNews();
+  }catch(e){
+    $('#bulkResult').innerHTML=`<div class="panel" style="color:#b91c1c">${esc(e.message)}</div>`;
+  }finally{
+    btn.disabled=false; btn.textContent='Upload All News';
+  }
+}
+
 async function loadCats(){cats=(await api('/categories')).categories;$('#screen').innerHTML=`<div class="panel"><div class="actions between"><h2>श्रेणी / उप-श्रेणी</h2><button class="btn btn-primary" onclick="addCat()">+ नई श्रेणी</button></div><table class="table"><thead><tr><th>नाम</th><th>Parent</th><th>Slug</th><th>Action</th></tr></thead><tbody>${cats.map(c=>`<tr><td>${c.parent_id?'↳ ':''}${esc(c.name)}</td><td>${esc(c.parent_name||'मुख्य')}</td><td>${esc(c.slug)}</td><td>${user.role!=='author'?`<button class="btn btn-danger" onclick="delCat(${c.id})">Delete</button>`:''}</td></tr>`).join('')}</tbody></table></div>`}
 async function addCat(){const name=prompt('नाम'),slug=prompt('English slug');if(!name||!slug)return;const p=prompt('Parent category ID? खाली = मुख्य');try{await api('/categories',{method:'POST',body:JSON.stringify({name,slug,parent_id:p?Number(p):null})});loadCats()}catch(e){alert(e.message)}}async function delCat(id){if(!confirm('Delete?'))return;try{await api('/categories?id='+id,{method:'DELETE'});loadCats()}catch(e){alert(e.message)}}
 async function loadComments(){const d=await api('/comments');$('#screen').innerHTML=`<div class="panel"><h2>टिप्पणी प्रबंधन</h2><table class="table"><thead><tr><th>समाचार</th><th>पाठक</th><th>Comment</th><th>Status</th><th>Action</th></tr></thead><tbody>${d.comments.map(c=>`<tr><td>${esc(c.news_title)}</td><td>${esc(c.user_name)}</td><td>${esc(c.body)}</td><td>${esc(c.status)}</td><td><button class="btn btn-primary" onclick="commentStatus(${c.id},'approved')">Approve</button> <button class="btn btn-danger" onclick="commentStatus(${c.id},'rejected')">Reject</button></td></tr>`).join('')}</tbody></table></div>`}async function commentStatus(id,status){try{await api('/comments?id='+id,{method:'PUT',body:JSON.stringify({status})});loadComments()}catch(e){alert(e.message)}}
